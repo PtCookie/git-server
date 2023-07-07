@@ -1,0 +1,46 @@
+#!/bin/sh
+
+if [ -z "$1" ]; then
+    echo "No name given."
+    echo "Run 'help git-init' to see usage."
+    exit 1
+fi
+
+if [ -z "$2" ]; then
+    echo "No owner given."
+    echo "Run 'help git-init' to see usage."
+    exit 1
+fi
+
+: ${REPOSITORY_DESC:="$3"}
+: ${REPOSITORY_SECTION:="$4"}
+
+REPOSITORY_NAME="$1"
+REPOSITORY_OWNER="$2"
+
+REPOSITORY_DIR=/srv/git/${REPOSITORY_NAME}.git
+
+if [ -d "${REPOSITORY_DIR}" ]; then
+    echo "Repository already exists."
+    exit 1
+fi
+
+git init --bare ${REPOSITORY_DIR}
+
+# Copy hooks
+cp /home/git/hooks/* ${REPOSITORY_DIR}/hooks/
+
+# Enable post-update hook
+mv ${REPOSITORY_DIR}/hooks/post-update.sample ${REPOSITORY_DIR}/hooks/post-update
+
+# Cgit config
+cat >>${REPOSITORY_DIR}/config <<EOF
+[cgit]
+        section = ${REPOSITORY_SECTION}
+        name = ${REPOSITORY_NAME}
+        owner = ${REPOSITORY_OWNER}
+        desc = ${REPOSITORY_DESC}
+EOF
+
+# Make symlink to home directory
+ln -s "${REPOSITORY_DIR}" "${HOME}"

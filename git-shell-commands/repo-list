@@ -1,0 +1,11 @@
+#!/bin/sh
+
+REPOSITORIES_PATH=/srv/git
+
+for PATH_ENTRY in ${REPOSITORIES_PATH}/*; do
+    if [ -d "$PATH_ENTRY" ]; then
+        if git -C ${PATH_ENTRY} rev-parse --git-dir >/dev/null; then
+            ls -1d "${PATH_ENTRY}" | sed 's|'"$(echo "$REPOSITORIES_PATH" | sed 's|/|\\/|g')"'\/||g'
+        fi
+    fi
+done

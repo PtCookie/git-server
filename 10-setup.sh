@@ -35,7 +35,7 @@ if [ -d "${GIT_REPOSITORIES_PATH}" ]; then
     # Symlink repositories to home directory
     for PATH_ENTRY in ${GIT_REPOSITORIES_PATH}/*; do
         if [ -d "$PATH_ENTRY" ]; then
-            if git -C ${PATH_ENTRY} rev-parse --git-dir >/dev/null; then
+            if su -s /bin/sh - "${GIT_USER}" -c "git -C ${PATH_ENTRY} rev-parse --git-dir >/dev/null"; then
                 ln -sf "${PATH_ENTRY}" "${GIT_HOME}"
             fi
         fi

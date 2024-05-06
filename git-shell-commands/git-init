@@ -1,15 +1,15 @@
 #!/bin/sh
 
 if [ -z "$1" ]; then
-    echo "No name given."
-    echo "Run 'help git-init' to see usage."
-    exit 1
+	echo "No name given."
+	echo "Run 'help git-init' to see usage."
+	exit 1
 fi
 
 if [ -z "$2" ]; then
-    echo "No owner given."
-    echo "Run 'help git-init' to see usage."
-    exit 1
+	echo "No owner given."
+	echo "Run 'help git-init' to see usage."
+	exit 1
 fi
 
 : ${REPOSITORY_DESC:="$3"}
@@ -21,8 +21,8 @@ REPOSITORY_OWNER="$2"
 REPOSITORY_DIR=/srv/git/${REPOSITORY_NAME}.git
 
 if [ -d "${REPOSITORY_DIR}" ]; then
-    echo "Repository already exists."
-    exit 1
+	echo "Repository already exists."
+	exit 1
 fi
 
 git init --bare ${REPOSITORY_DIR}

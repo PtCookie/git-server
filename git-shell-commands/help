@@ -1,9 +1,9 @@
 #!/bin/sh
 
 if [ -z "$1" ]; then
-    GIT_VERSION="$(git --version)"
+	GIT_VERSION="$(git --version)"
 
-    cat <<EOF
+	cat <<EOF
 Git Shell (${GIT_VERSION})
 Run 'help' for help, or 'exit' to leave.
 
@@ -11,42 +11,42 @@ Available commands:
 -------------------------------------------------------------
 EOF
 
-    cd "$(dirname "$0")" || exit 1
+	cd "$(dirname "$0")" || exit 1
 
-    for cmd in *; do
-        case "$cmd" in
-        help) ;;
-        *) [ -f "$cmd" ] && [ -x "$cmd" ] && echo "$cmd" ;;
-        esac
-    done
+	for cmd in *; do
+		case "$cmd" in
+		help) ;;
+		*) [ -f "$cmd" ] && [ -x "$cmd" ] && echo "$cmd" ;;
+		esac
+	done
 else
-    COMMAND="$1"
+	COMMAND="$1"
 
-    case $COMMAND in
-    git-init)
-        echo "Initialize git repository"
-        printf '\n'
-        echo "Usage : git-init NAME OWNER [DESC] [SECTION]"
-        ;;
-    git-config)
-        echo "Modify global git config"
-        printf '\n'
-        echo "Usage : git-config"
-        ;;
-    repo-config)
-        echo "Modify repository config"
-        printf '\n'
-        echo "Usage : repo-config NAME"
-        ;;
-    repo-list)
-        echo "List repositories"
-        printf '\n'
-        echo "Usage : repo-list"
-        ;;
-    *)
-        echo "Not available command."
-        ;;
-    esac
+	case $COMMAND in
+	git-init)
+		echo "Initialize git repository"
+		printf '\n'
+		echo "Usage : git-init NAME OWNER [DESC] [SECTION]"
+		;;
+	git-config)
+		echo "Modify global git config"
+		printf '\n'
+		echo "Usage : git-config"
+		;;
+	repo-config)
+		echo "Modify repository config"
+		printf '\n'
+		echo "Usage : repo-config NAME"
+		;;
+	repo-list)
+		echo "List repositories"
+		printf '\n'
+		echo "Usage : repo-list"
+		;;
+	*)
+		echo "Not available command."
+		;;
+	esac
 fi
 
 printf '\n'

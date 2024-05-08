@@ -5,32 +5,39 @@ Container image for Git and SSH server.
 ## Build
 
 ```sh
-# Use podman build
-podman build -t git-server:latest -f Containerfile
+# Use docker build
+docker build --tag git-server:latest --file Containerfile .
 
-# Or buildah
-buildah build -t git-server:latest -f Containerfile
+# Use podman or buildah
+buildah build --tag git-server:latest --file Containerfile .
 ```
 
 ## Run
 
-Make volume and secret.
+Make volume for git repository.
 
 ```sh
+docker volume create git-repository
 podman volume create git-repository
-
-podman secret create ssh /path/to/authorized_keys
 ```
 
 Run container.
 
 ```sh
-podman run -d -p 2222:22 \
-    --name git-server 
+docker run -d --name git-server \
+    --env GIT_USER_UID=1000 \
+    --env GIT_USER_GID=1000 \
+    --env SSH_PUBLIC_KEYS_URL=https://url.to.authorized.keys \
+    --publish 2222:22 \
     --volume git-repository:/srv/git \
-    --secret ssh,target=/home/git/.ssh/authorized_keys,uid=1000,gid=1000,mode=0600 \
-    --env GIT_USER_UID=1000
-    --env GIT_USER_GID=1000
+    git-server:latest
+
+podman run -d --name git-server \
+    --env GIT_USER_UID=1000 \
+    --env GIT_USER_GID=1000 \
+    --env SSH_PUBLIC_KEYS_URL=https://url.to.authorized.keys \
+    --publish 2222:22 \
+    --volume git-repository:/srv/git \
     git-server:latest
 ```
 
@@ -43,4 +50,3 @@ Softwares in container image may be under their own licenses.
 ## Mics
 
 Inspired by [git-server-docker](https://github.com/rockstorm101/git-server-docker/)
-

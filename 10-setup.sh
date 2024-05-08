@@ -24,6 +24,7 @@ if [ -n "${GIT_USER_UID-}" ]; then
 	fi
 fi
 
+# Setup repositories
 if [ -d "${GIT_REPOSITORIES_PATH}" ]; then
 	cd "${GIT_REPOSITORIES_PATH}"/.
 
@@ -42,6 +43,20 @@ if [ -d "${GIT_REPOSITORIES_PATH}" ]; then
 	done
 else
 	warn "Directory $GIT_REPOSITORIES_PATH not found."
+fi
+
+# Get SSH public keys
+if [ -n "${SSH_PUBLIC_KEYS_URL-}" ]; then
+	mkdir -p "${GIT_HOME}"/.ssh
+	wget -qO "${GIT_HOME}"/.ssh/authorized_keys "${SSH_PUBLIC_KEYS_URL}" || warn "Failed to fetch public keys."
+fi
+
+# Set ownership for public keys
+if [ -f "${GIT_HOME}"/.ssh/authorized_keys ]; then
+	chown -R "${GIT_USER}":"${GIT_GROUP}" "${GIT_HOME}"
+else
+	warn "There is no authorized keys found."
+	warn "Check if server is accessable via other ways."
 fi
 
 # Replace SSH host keys if path given

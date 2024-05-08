@@ -1,4 +1,4 @@
-FROM docker.io/library/alpine:3.18.2
+FROM docker.io/library/alpine:3.19.1
 
 # Install packages
 RUN set -ex; \
@@ -43,4 +43,3 @@ VOLUME ["/srv/git"]
 
 CMD ["/usr/sbin/sshd", "-D"]
 ENTRYPOINT ["/entrypoint.sh"]
-

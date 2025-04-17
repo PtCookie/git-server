@@ -43,7 +43,7 @@ podman run -d --name git-server \
 
 ## License
 
-MIT &copy; [PtCookie](https://blog.ptcookie.dev)
+MIT &copy; [PtCookie](https://devlog.ptcookie.net)
 
 Softwares in container image may be under their own licenses.
 

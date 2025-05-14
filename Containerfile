@@ -27,7 +27,7 @@ COPY git-shell-commands ${GIT_HOME}/git-shell-commands
 COPY hooks ${GIT_HOME}/hooks
 
 # Copy gitconfig
-COPY gitconfig ${GIT_HOME}/.gitconfig
+COPY .gitconfig ${GIT_HOME}/.gitconfig
 
 # Delete message of the day
 RUN rm /etc/motd

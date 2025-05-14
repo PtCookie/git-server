@@ -1,3 +1,15 @@
 #!/bin/sh
 
-git config --global --edit
+if [ -z "$1" ]; then
+	git config --global --edit
+else
+	REPOSITORY_NAME="$(echo "$1" | sed 's|.git||')"
+	REPOSITORY_DIR=/srv/git/${REPOSITORY_NAME}.git
+
+	if [ ! -d "${REPOSITORY_DIR}" ]; then
+		echo "Repository not exists."
+		exit 1
+	fi
+
+	git -C ${REPOSITORY_DIR} config --edit
+fi

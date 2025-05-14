@@ -24,24 +24,20 @@ else
 
 	case $COMMAND in
 	git-init)
-		echo "Initialize git repository"
+		echo "Initialize git repository."
 		printf '\n'
 		echo "Usage : git-init NAME OWNER [DESC] [SECTION]"
 		;;
 	git-config)
-		echo "Modify global git config"
+		echo "Modify git config."
+		echo "If repository name is not given, modify global config."
 		printf '\n'
-		echo "Usage : git-config"
+		echo "Usage : git-config [NAME]"
 		;;
-	repo-config)
-		echo "Modify repository config"
+	ls)
+		echo "List repositories."
 		printf '\n'
-		echo "Usage : repo-config NAME"
-		;;
-	repo-list)
-		echo "List repositories"
-		printf '\n'
-		echo "Usage : repo-list"
+		echo "Usage : ls"
 		;;
 	*)
 		echo "Not available command."

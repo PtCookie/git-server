@@ -36,10 +36,10 @@ mv ${REPOSITORY_DIR}/hooks/post-update.sample ${REPOSITORY_DIR}/hooks/post-updat
 # Cgit config
 cat >>${REPOSITORY_DIR}/config <<EOF
 [cgit]
-        section = ${REPOSITORY_SECTION}
-        name = ${REPOSITORY_NAME}
-        owner = ${REPOSITORY_OWNER}
-        desc = ${REPOSITORY_DESC}
+	section = ${REPOSITORY_SECTION}
+	name = ${REPOSITORY_NAME}
+	owner = ${REPOSITORY_OWNER}
+	desc = ${REPOSITORY_DESC}
 EOF
 
 # Make symlink to home directory

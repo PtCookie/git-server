@@ -1,0 +1,36 @@
+#!/bin/sh
+
+if [ -z "$1" ]; then
+	echo "No repository name given."
+	echo "Run 'help rm' to see usage."
+	exit 1
+fi
+
+REPOSITORY_NAME="$1"
+
+REPOSITORY_DIR=/srv/git/${REPOSITORY_NAME}.git
+
+if [ ! -d "${REPOSITORY_DIR}" ]; then
+	echo "Repository ${REPOSITORY_NAME} not exists."
+	exit 1
+fi
+
+read -p "Remove repository ${REPOSITORY_NAME}? [yes|No]" INPUT
+case $INPUT in
+[Yy] | [Yy][Ee][Ss])
+	echo "Remove ${REPOSITORY_NAME}."
+	;;
+[Nn] | [Nn][Oo])
+	echo "Cancelled."
+	exit 0
+	;;
+*)
+	echo "Invalid input. Aborted."
+	exit 1
+	;;
+esac
+
+rm -rf ${REPOSITORY_DIR}
+
+# Remove symlink
+rm ${HOME}/${REPOSITORY_NAME}.git

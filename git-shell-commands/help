@@ -39,6 +39,16 @@ else
 		printf '\n'
 		echo "Usage : ls"
 		;;
+	mv)
+		echo "Rename repository."
+		printf '\n'
+		echo "Usage : mv CURRENT NEW"
+		;;
+	rm)
+		echo "Remove repository."
+		printf '\n'
+		echo "Usage : rm NAME"
+		;;
 	*)
 		echo "Not available command."
 		;;

@@ -1,0 +1,52 @@
+#!/bin/sh
+
+if [ -z "$1" ]; then
+	echo "No current name given."
+	echo "Run 'help mv' to see usage."
+	exit 1
+fi
+
+if [ -z "$2" ]; then
+	echo "No new name given."
+	echo "Run 'help mv' to see usage."
+	exit 1
+fi
+
+CURRENT_NAME="$1"
+NEW_NAME="$2"
+
+CURRENT_DIR=/srv/git/${CURRENT_NAME}.git
+NEW_DIR=/srv/git/${NEW_NAME}.git
+
+if [ ! -d "${CURRENT_DIR}" ]; then
+	echo "Repository ${CURRENT_NAME} not exists."
+	exit 1
+fi
+
+if [ -d "${NEW_DIR}" ]; then
+	echo "Repository ${NEW_NAME} already exists."
+	exit 1
+fi
+
+read -p "Move repository ${CURRENT_NAME} to ${NEW_NAME}? [yes|No]" INPUT
+case $INPUT in
+[Yy] | [Yy][Ee][Ss])
+	echo "Move to ${NEW_NAME}."
+	;;
+[Nn] | [Nn][Oo])
+	echo "Cancelled."
+	exit 0
+	;;
+*)
+	echo "Invalid input. Aborted."
+	exit 1
+	;;
+esac
+
+mv ${CURRENT_DIR} ${NEW_DIR}
+
+# Remove old symlink
+rm ${HOME}/${CURRENT_NAME}.git
+
+# Make symlink to home directory
+ln -s "${NEW_DIR}" "${HOME}"

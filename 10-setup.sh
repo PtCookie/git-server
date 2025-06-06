@@ -55,7 +55,7 @@ fi
 if [ -f "${GIT_HOME}"/.ssh/authorized_keys ]; then
 	chmod 700 "${GIT_HOME}"/.ssh
 	chmod 600 "${GIT_HOME}"/.ssh/authorized_keys
-	chown -R "${GIT_USER}":"${GIT_GROUP}" "${GIT_HOME}"/.ssh
+	chown -R "${GIT_USER}":"${GIT_GROUP}" "${GIT_HOME}"
 else
 	warn "There is no authorized keys found."
 	warn "Check if server is accessable via other ways."

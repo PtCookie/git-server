@@ -51,9 +51,11 @@ if [ -n "${SSH_PUBLIC_KEYS_URL-}" ]; then
 	wget -qO "${GIT_HOME}"/.ssh/authorized_keys "${SSH_PUBLIC_KEYS_URL}" || warn "Failed to fetch public keys."
 fi
 
-# Set ownership for public keys
+# Set permission and ownership for public keys
 if [ -f "${GIT_HOME}"/.ssh/authorized_keys ]; then
-	chown -R "${GIT_USER}":"${GIT_GROUP}" "${GIT_HOME}"
+	chmod 700 "${GIT_HOME}"/.ssh
+	chmod 600 "${GIT_HOME}"/.ssh/authorized_keys
+	chown -R "${GIT_USER}":"${GIT_GROUP}" "${GIT_HOME}"/.ssh
 else
 	warn "There is no authorized keys found."
 	warn "Check if server is accessable via other ways."

@@ -1,8 +1,8 @@
-FROM docker.io/library/alpine:3.21
+FROM docker.io/library/alpine:3.22
 
 # Install packages
 RUN set -ex; \
-    apk add --no-cache git openssh
+    apk add --no-cache git openssh curl
 
 # Generate SSH host keys
 RUN ssh-keygen -A

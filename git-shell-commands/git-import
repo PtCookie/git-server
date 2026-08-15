@@ -1,0 +1,84 @@
+#!/bin/sh
+# vim: sw=4:ts=4:et
+
+set -eu
+
+. "$(dirname "$0")/common.sh"
+
+usage() {
+	echo "Import a remote repository as a new bare repository."
+	printf '\n'
+	echo "Usage : git import URL NAME OWNER [DESC] [SECTION]"
+	echo "        git-import URL NAME OWNER [DESC] [SECTION]"
+	printf '\n'
+	echo "URL must start with https://, http://, git:// or ssh://."
+	echo "The remote is not kept: the import becomes a standalone repository."
+}
+
+case "${1:-}" in
+-h | --help)
+	usage
+	exit 0
+	;;
+esac
+
+if [ $# -lt 1 ]; then
+	die_usage "no url given."
+fi
+
+if [ $# -lt 2 ]; then
+	die_usage "no name given."
+fi
+
+if [ $# -lt 3 ]; then
+	die_usage "no owner given."
+fi
+
+if [ $# -gt 5 ]; then
+	die_usage "too many arguments."
+fi
+
+REPOSITORY_URL="$1"
+
+# Only well known transports.  This also rejects 'ext::<command>', which git
+# would happily run as a shell command, and URLs starting with '-', which
+# would be taken as options by git clone.
+case "${REPOSITORY_URL}" in
+https://?* | http://?* | git://?* | ssh://?*) ;;
+*)
+	die_usage "unsupported url '${REPOSITORY_URL}'."
+	;;
+esac
+
+REPOSITORY_NAME="$(repo_name "$2")" || exit 1
+REPOSITORY_OWNER="$3"
+REPOSITORY_DESC="${4:-}"
+REPOSITORY_SECTION="${5:-}"
+
+REPOSITORY_DIR="$(repo_dir "${REPOSITORY_NAME}")"
+
+require_no_repository "${REPOSITORY_NAME}" || exit 1
+
+# Do not leave a half-imported repository behind if any step below fails.
+INCOMPLETE=1
+trap '[ -z "${INCOMPLETE}" ] || rm -rf "${REPOSITORY_DIR}"' EXIT
+
+git clone --mirror -- "${REPOSITORY_URL}" "${REPOSITORY_DIR}"
+
+# Drop the mirror remote so that later pushes are not overwritten by a fetch.
+# Remove this line if the repository should stay a mirror of its source.
+git -C "${REPOSITORY_DIR}" remote remove origin
+
+install_hooks "${REPOSITORY_DIR}"
+
+set_metadata "${REPOSITORY_DIR}" \
+	"${REPOSITORY_NAME}" \
+	"${REPOSITORY_OWNER}" \
+	"${REPOSITORY_DESC}" \
+	"${REPOSITORY_SECTION}"
+
+link_repo "${REPOSITORY_NAME}"
+
+INCOMPLETE=
+
+echo "Imported ${REPOSITORY_URL} as ${REPOSITORY_NAME}."

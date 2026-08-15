@@ -1,58 +1,75 @@
 #!/bin/sh
+# vim: sw=4:ts=4:et
 
-if [ -z "$1" ]; then
+set -eu
+
+. "$(dirname "$0")/common.sh"
+
+COMMAND_DIR="$(dirname "$0")"
+
+if [ $# -eq 0 ]; then
 	GIT_VERSION="$(git --version)"
 
 	cat <<EOF
 Git Shell (${GIT_VERSION})
 Run 'help' for help, or 'exit' to leave.
 
-Available commands:
+Repository commands, also usable as 'git-init', 'git-config', ...:
 -------------------------------------------------------------
 EOF
 
-	cd "$(dirname "$0")" || exit 1
+	cd "${COMMAND_DIR}" || exit 1
 
-	for cmd in *; do
-		case "$cmd" in
-		help) ;;
-		*) [ -f "$cmd" ] && [ -x "$cmd" ] && echo "$cmd" ;;
+	for CMD in git-*; do
+		[ -f "$CMD" ] && [ -x "$CMD" ] || continue
+
+		echo "git ${CMD#git-}"
+	done
+
+	cat <<EOF
+
+Other commands:
+-------------------------------------------------------------
+EOF
+
+	for CMD in *; do
+		[ -f "$CMD" ] && [ -x "$CMD" ] || continue
+
+		case "$CMD" in
+		git | git-*) ;;
+		*) echo "$CMD" ;;
 		esac
 	done
+
+	printf '\n'
+	echo "Run 'help COMMAND' to see the usage of a command."
+	printf '\n'
+
+	exit 0
+fi
+
+# Accept 'help git init' as well as 'help git-init'.
+if [ "$1" = "git" ] && [ $# -ge 2 ]; then
+	COMMAND="git-$2"
 else
 	COMMAND="$1"
-
-	case $COMMAND in
-	git-init)
-		echo "Initialize git repository."
-		printf '\n'
-		echo "Usage : git-init NAME OWNER [DESC] [SECTION]"
-		;;
-	git-config)
-		echo "Modify git config."
-		echo "If repository name is not given, modify global config."
-		printf '\n'
-		echo "Usage : git-config [NAME]"
-		;;
-	ls)
-		echo "List repositories."
-		printf '\n'
-		echo "Usage : ls"
-		;;
-	mv)
-		echo "Rename repository."
-		printf '\n'
-		echo "Usage : mv CURRENT NEW"
-		;;
-	rm)
-		echo "Remove repository."
-		printf '\n'
-		echo "Usage : rm NAME"
-		;;
-	*)
-		echo "Not available command."
-		;;
-	esac
 fi
+
+case "$COMMAND" in
+*[!A-Za-z0-9-]*)
+	die "not an available command: $*"
+	;;
+esac
+
+TARGET="${COMMAND_DIR}/${COMMAND}"
+
+if [ ! -f "$TARGET" ] || [ ! -x "$TARGET" ]; then
+	warn "not an available command: $*"
+	echo "Run 'help' to see available commands." >&2
+	exit 1
+fi
+
+# Each command documents itself, so there is nothing to keep in sync here.
+"$TARGET" --help
 
 printf '\n'

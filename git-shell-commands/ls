@@ -1,11 +1,31 @@
 #!/bin/sh
+# vim: sw=4:ts=4:et
 
-REPOSITORIES_PATH=/srv/git
+set -eu
 
-for PATH_ENTRY in ${REPOSITORIES_PATH}/*; do
-	if [ -d "$PATH_ENTRY" ]; then
-		if git -C ${PATH_ENTRY} rev-parse --git-dir >/dev/null; then
-			ls -1d "${PATH_ENTRY}" | sed 's|'"$(echo "$REPOSITORIES_PATH" | sed 's|/|\\/|g')"'\/||g'
-		fi
-	fi
-done
+. "$(dirname "$0")/common.sh"
+
+usage() {
+	echo "List repositories."
+	printf '\n'
+	echo "Usage : ls"
+	printf '\n'
+	echo "Names are printed without the '.git' suffix,"
+	echo "the same form the other commands expect."
+}
+
+case "${1:-}" in
+-h | --help)
+	usage
+	exit 0
+	;;
+esac
+
+REPOSITORIES="$(list_repositories)"
+
+if [ -z "${REPOSITORIES}" ]; then
+	echo "No repositories."
+	exit 0
+fi
+
+printf '%s\n' "${REPOSITORIES}"

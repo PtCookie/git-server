@@ -1,15 +1,103 @@
 #!/bin/sh
+# vim: sw=4:ts=4:et
 
-if [ -z "$1" ]; then
-	git config --global --edit
+set -eu
+
+. "$(dirname "$0")/common.sh"
+
+usage() {
+	echo "Read or modify a git config."
+	echo "The first argument selects the config: a repository name, or --global."
+	printf '\n'
+	echo "Usage : git config [NAME|--global]"
+	echo "        git config [NAME|--global] KEY [VALUE]"
+	echo "        git config [NAME|--global] --unset KEY"
+	echo "        git config [NAME|--global] --list"
+	printf '\n'
+	echo "With no KEY the config is opened in an editor,"
+	echo "which requires an interactive session."
+}
+
+case "${1:-}" in
+-h | --help)
+	usage
+	exit 0
+	;;
+esac
+
+# No argument at all means the global config, as before.
+if [ $# -eq 0 ]; then
+	set -- --global
+fi
+
+TARGET="$1"
+shift
+
+if [ "$TARGET" = "--global" ]; then
+	SCOPE=global
 else
-	REPOSITORY_NAME="$(echo "$1" | sed 's|.git||')"
-	REPOSITORY_DIR=/srv/git/${REPOSITORY_NAME}.git
+	SCOPE=repository
 
-	if [ ! -d "${REPOSITORY_DIR}" ]; then
-		echo "Repository not exists."
+	REPOSITORY_NAME="$(repo_name "$TARGET")" || exit 1
+	REPOSITORY_DIR="$(repo_dir "${REPOSITORY_NAME}")"
+
+	require_repository "${REPOSITORY_NAME}" || exit 1
+fi
+
+# Always pin the scope, otherwise reads fall through to the global config
+# and make it look as if a repository had settings it does not have.
+run_config() {
+	if [ "$SCOPE" = global ]; then
+		git config --global "$@"
+	else
+		git -C "${REPOSITORY_DIR}" config --local "$@"
+	fi
+}
+
+edit_config() {
+	# git falls back to vi, which produces garbage when stdin is not a
+	# terminal (as with 'ssh git@host git config NAME').
+	if [ ! -t 0 ]; then
+		warn "editing the config requires an interactive session."
+		echo "Pass a KEY (and VALUE) instead, e.g. 'git config NAME cgit.desc \"...\"'." >&2
 		exit 1
 	fi
 
-	git -C ${REPOSITORY_DIR} config --edit
+	run_config --edit
+}
+
+if [ $# -eq 0 ]; then
+	edit_config
+	exit 0
 fi
+
+case "$1" in
+-e | --edit)
+	[ $# -eq 1 ] || die_usage "too many arguments."
+	edit_config
+	;;
+-l | --list)
+	[ $# -eq 1 ] || die_usage "too many arguments."
+	run_config --list
+	;;
+--unset)
+	[ $# -eq 2 ] || die_usage "--unset takes exactly one KEY."
+	run_config --unset "$2" || die "key '$2' is not set."
+	;;
+-*)
+	die_usage "unknown option '$1'."
+	;;
+*)
+	case $# in
+	1)
+		run_config --get "$1" || die "key '$1' is not set."
+		;;
+	2)
+		run_config "$1" "$2"
+		;;
+	*)
+		die_usage "too many arguments."
+		;;
+	esac
+	;;
+esac

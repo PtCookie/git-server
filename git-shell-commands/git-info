@@ -1,0 +1,73 @@
+#!/bin/sh
+# vim: sw=4:ts=4:et
+
+set -eu
+
+. "$(dirname "$0")/common.sh"
+
+usage() {
+	echo "Show a summary of a repository."
+	printf '\n'
+	echo "Usage : git info NAME"
+	echo "        git-info NAME"
+}
+
+case "${1:-}" in
+-h | --help)
+	usage
+	exit 0
+	;;
+esac
+
+if [ $# -lt 1 ]; then
+	die_usage "no repository name given."
+fi
+
+if [ $# -gt 1 ]; then
+	die_usage "too many arguments."
+fi
+
+REPOSITORY_NAME="$(repo_name "$1")" || exit 1
+REPOSITORY_DIR="$(repo_dir "${REPOSITORY_NAME}")"
+
+require_repository "${REPOSITORY_NAME}" || exit 1
+
+config_get() {
+	git -C "${REPOSITORY_DIR}" config --get "$1" 2>/dev/null || true
+}
+
+count_refs() {
+	git -C "${REPOSITORY_DIR}" for-each-ref --format='%(refname)' "$1" | wc -l | tr -d ' '
+}
+
+OWNER="$(config_get cgit.owner)"
+DESC="$(config_get cgit.desc)"
+SECTION="$(config_get cgit.section)"
+
+HEAD_REF="$(git -C "${REPOSITORY_DIR}" symbolic-ref --short HEAD 2>/dev/null || true)"
+BRANCHES="$(count_refs refs/heads)"
+TAGS="$(count_refs refs/tags)"
+LAST_COMMIT="$(git -C "${REPOSITORY_DIR}" for-each-ref --sort=-committerdate --count=1 \
+	--format='%(committerdate:iso8601) %(refname:short) %(subject)' refs/heads)"
+SIZE="$(du -sh "${REPOSITORY_DIR}" | awk '{ print $1 }')"
+
+printf '%-13s %s\n' 'Name:' "${REPOSITORY_NAME}"
+printf '%-13s %s\n' 'Owner:' "${OWNER:-(unset)}"
+printf '%-13s %s\n' 'Description:' "${DESC:-(unset)}"
+printf '%-13s %s\n' 'Section:' "${SECTION:-(unset)}"
+printf '%-13s %s\n' 'Path:' "${REPOSITORY_DIR}"
+printf '%-13s %s\n' 'Head:' "${HEAD_REF:-(unborn)}"
+printf '%-13s %s\n' 'Branches:' "${BRANCHES}"
+printf '%-13s %s\n' 'Tags:' "${TAGS}"
+printf '%-13s %s\n' 'Last commit:' "${LAST_COMMIT:-(none)}"
+printf '%-13s %s\n' 'Size:' "${SIZE}"
+
+# An unborn HEAD is normal for a fresh repository, but points at a mistake
+# once something has been pushed.
+if [ -n "${HEAD_REF}" ] && [ "${BRANCHES}" != "0" ]; then
+	if ! git -C "${REPOSITORY_DIR}" show-ref --verify --quiet "refs/heads/${HEAD_REF}"; then
+		printf '\n'
+		warn "HEAD points at '${HEAD_REF}', which does not exist. Clones will look empty."
+		echo "Run 'git head ${REPOSITORY_NAME} BRANCH' to fix it." >&2
+	fi
+fi

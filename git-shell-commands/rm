@@ -1,36 +1,74 @@
 #!/bin/sh
+# vim: sw=4:ts=4:et
 
-if [ -z "$1" ]; then
-	echo "No repository name given."
-	echo "Run 'help rm' to see usage."
-	exit 1
+set -eu
+
+. "$(dirname "$0")/common.sh"
+
+usage() {
+	echo "Remove a repository. This cannot be undone."
+	printf '\n'
+	echo "Usage : rm [--yes] NAME"
+	printf '\n'
+	echo "  --yes  Skip the confirmation prompt."
+	printf '\n'
+	echo "Interactively you have to type NAME back to confirm."
+}
+
+ASSUME_YES=
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+	-h | --help)
+		usage
+		exit 0
+		;;
+	-y | --yes)
+		ASSUME_YES=1
+		shift
+		;;
+	--)
+		shift
+		break
+		;;
+	-*)
+		die_usage "unknown option '$1'."
+		;;
+	*)
+		break
+		;;
+	esac
+done
+
+if [ $# -lt 1 ]; then
+	die_usage "no repository name given."
 fi
 
-REPOSITORY_NAME="$1"
-
-REPOSITORY_DIR=/srv/git/${REPOSITORY_NAME}.git
-
-if [ ! -d "${REPOSITORY_DIR}" ]; then
-	echo "Repository ${REPOSITORY_NAME} not exists."
-	exit 1
+if [ $# -gt 1 ]; then
+	die_usage "too many arguments."
 fi
 
-read -p "Remove repository ${REPOSITORY_NAME}? [yes|No]" INPUT
-case $INPUT in
-[Yy] | [Yy][Ee][Ss])
-	echo "Remove ${REPOSITORY_NAME}."
-	;;
-[Nn] | [Nn][Oo])
-	echo "Cancelled."
-	exit 0
-	;;
-*)
-	echo "Invalid input. Aborted."
-	exit 1
-	;;
-esac
+REPOSITORY_NAME="$(repo_name "$1")" || exit 1
+REPOSITORY_DIR="$(repo_dir "${REPOSITORY_NAME}")"
 
-rm -rf ${REPOSITORY_DIR}
+require_repository "${REPOSITORY_NAME}" || exit 1
 
-# Remove symlink
-rm ${HOME}/${REPOSITORY_NAME}.git
+if [ -z "${ASSUME_YES}" ]; then
+	# Show what is about to be lost, so a mistyped name is noticed here
+	# rather than afterwards.
+	BRANCHES="$(git -C "${REPOSITORY_DIR}" for-each-ref --format='%(refname)' refs/heads | wc -l | tr -d ' ')"
+	LAST_COMMIT="$(git -C "${REPOSITORY_DIR}" for-each-ref --sort=-committerdate --count=1 \
+		--format='%(committerdate:short) %(subject)' refs/heads)"
+
+	echo "Repository : ${REPOSITORY_NAME}"
+	echo "Branches   : ${BRANCHES}"
+	echo "Last commit: ${LAST_COMMIT:-(none)}"
+	printf '\n'
+
+	confirm_name "${REPOSITORY_NAME}" || exit 1
+fi
+
+rm -rf "${REPOSITORY_DIR}"
+unlink_repo "${REPOSITORY_NAME}"
+
+echo "Removed ${REPOSITORY_NAME}."

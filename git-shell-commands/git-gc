@@ -1,0 +1,54 @@
+#!/bin/sh
+# vim: sw=4:ts=4:et
+
+set -eu
+
+. "$(dirname "$0")/common.sh"
+
+usage() {
+	echo "Clean up and compact repositories."
+	printf '\n'
+	echo "Usage : git gc [--aggressive] [NAME]"
+	echo "        git-gc [--aggressive] [NAME]"
+	printf '\n'
+	echo "Without NAME every repository is processed."
+}
+
+AGGRESSIVE=
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+	-h | --help)
+		usage
+		exit 0
+		;;
+	--aggressive)
+		AGGRESSIVE=1
+		shift
+		;;
+	--)
+		shift
+		break
+		;;
+	-*)
+		die_usage "unknown option '$1'."
+		;;
+	*)
+		break
+		;;
+	esac
+done
+
+if [ $# -gt 1 ]; then
+	die_usage "too many arguments."
+fi
+
+collect() {
+	if [ -n "${AGGRESSIVE}" ]; then
+		git -C "$2" gc --aggressive --prune=now
+	else
+		git -C "$2" gc --prune=now
+	fi
+}
+
+run_over_repositories collect "$@"

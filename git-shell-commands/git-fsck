@@ -1,0 +1,36 @@
+#!/bin/sh
+# vim: sw=4:ts=4:et
+
+set -eu
+
+. "$(dirname "$0")/common.sh"
+
+usage() {
+	echo "Check the integrity of repositories."
+	printf '\n'
+	echo "Usage : git fsck [NAME]"
+	echo "        git-fsck [NAME]"
+	printf '\n'
+	echo "Without NAME every repository is checked."
+	echo "Exits non-zero if any repository reports a problem."
+}
+
+case "${1:-}" in
+-h | --help)
+	usage
+	exit 0
+	;;
+-?*)
+	die_usage "unknown option '$1'."
+	;;
+esac
+
+if [ $# -gt 1 ]; then
+	die_usage "too many arguments."
+fi
+
+check() {
+	git -C "$2" fsck --no-progress
+}
+
+run_over_repositories check "$@"

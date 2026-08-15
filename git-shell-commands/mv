@@ -1,52 +1,80 @@
 #!/bin/sh
+# vim: sw=4:ts=4:et
 
-if [ -z "$1" ]; then
-	echo "No current name given."
-	echo "Run 'help mv' to see usage."
-	exit 1
+set -eu
+
+. "$(dirname "$0")/common.sh"
+
+usage() {
+	echo "Rename a repository."
+	printf '\n'
+	echo "Usage : mv [--yes] CURRENT NEW"
+	printf '\n'
+	echo "  --yes  Skip the confirmation prompt."
+}
+
+ASSUME_YES=
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+	-h | --help)
+		usage
+		exit 0
+		;;
+	-y | --yes)
+		ASSUME_YES=1
+		shift
+		;;
+	--)
+		shift
+		break
+		;;
+	-*)
+		die_usage "unknown option '$1'."
+		;;
+	*)
+		break
+		;;
+	esac
+done
+
+if [ $# -lt 1 ]; then
+	die_usage "no current name given."
 fi
 
-if [ -z "$2" ]; then
-	echo "No new name given."
-	echo "Run 'help mv' to see usage."
-	exit 1
+if [ $# -lt 2 ]; then
+	die_usage "no new name given."
 fi
 
-CURRENT_NAME="$1"
-NEW_NAME="$2"
-
-CURRENT_DIR=/srv/git/${CURRENT_NAME}.git
-NEW_DIR=/srv/git/${NEW_NAME}.git
-
-if [ ! -d "${CURRENT_DIR}" ]; then
-	echo "Repository ${CURRENT_NAME} not exists."
-	exit 1
+if [ $# -gt 2 ]; then
+	die_usage "too many arguments."
 fi
 
-if [ -d "${NEW_DIR}" ]; then
-	echo "Repository ${NEW_NAME} already exists."
-	exit 1
+CURRENT_NAME="$(repo_name "$1")" || exit 1
+NEW_NAME="$(repo_name "$2")" || exit 1
+
+if [ "${CURRENT_NAME}" = "${NEW_NAME}" ]; then
+	die "current and new name are the same."
 fi
 
-read -p "Move repository ${CURRENT_NAME} to ${NEW_NAME}? [yes|No]" INPUT
-case $INPUT in
-[Yy] | [Yy][Ee][Ss])
-	echo "Move to ${NEW_NAME}."
-	;;
-[Nn] | [Nn][Oo])
-	echo "Cancelled."
-	exit 0
-	;;
-*)
-	echo "Invalid input. Aborted."
-	exit 1
-	;;
-esac
+CURRENT_DIR="$(repo_dir "${CURRENT_NAME}")"
+NEW_DIR="$(repo_dir "${NEW_NAME}")"
 
-mv ${CURRENT_DIR} ${NEW_DIR}
+require_repository "${CURRENT_NAME}" || exit 1
+require_no_repository "${NEW_NAME}" || exit 1
 
-# Remove old symlink
-rm ${HOME}/${CURRENT_NAME}.git
+if [ -z "${ASSUME_YES}" ]; then
+	confirm "Rename repository ${CURRENT_NAME} to ${NEW_NAME}?" || exit 1
+fi
 
-# Make symlink to home directory
-ln -s "${NEW_DIR}" "${HOME}"
+mv "${CURRENT_DIR}" "${NEW_DIR}"
+
+# Keep the cgit metadata in sync with the new name.
+if git -C "${NEW_DIR}" config --get cgit.name >/dev/null 2>&1; then
+	git -C "${NEW_DIR}" config cgit.name "${NEW_NAME}"
+fi
+
+unlink_repo "${CURRENT_NAME}"
+link_repo "${NEW_NAME}"
+
+echo "Renamed ${CURRENT_NAME} to ${NEW_NAME}."

@@ -33,11 +33,18 @@ if [ -d "${GIT_REPOSITORIES_PATH}" ]; then
 	find . -type f -exec chmod u=rwX,go=rX '{}' \;
 	find . -type d -exec chmod u=rwx,go=rx '{}' \;
 
+	# Drop symlinks left behind by removed repositories
+	for LINK_ENTRY in "${GIT_HOME}"/*.git; do
+		if [ -L "$LINK_ENTRY" ] && [ ! -d "$LINK_ENTRY" ]; then
+			rm -f "$LINK_ENTRY"
+		fi
+	done
+
 	# Symlink repositories to home directory
-	for PATH_ENTRY in ${GIT_REPOSITORIES_PATH}/*; do
+	for PATH_ENTRY in "${GIT_REPOSITORIES_PATH}"/*; do
 		if [ -d "$PATH_ENTRY" ]; then
-			if su -s /bin/sh - "${GIT_USER}" -c "git -C ${PATH_ENTRY} rev-parse --git-dir >/dev/null"; then
-				ln -sf "${PATH_ENTRY}" "${GIT_HOME}"
+			if su -s /bin/sh - "${GIT_USER}" -c "git -C '${PATH_ENTRY}' rev-parse --git-dir >/dev/null 2>&1"; then
+				ln -sfn "${PATH_ENTRY}" "${GIT_HOME}/$(basename "${PATH_ENTRY}")"
 			fi
 		fi
 	done

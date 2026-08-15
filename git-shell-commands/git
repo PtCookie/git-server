@@ -1,0 +1,64 @@
+#!/bin/sh
+# vim: sw=4:ts=4:et
+#
+# Dispatcher so that 'git SUBCOMMAND' works in an interactive git-shell
+# session.  Non-interactive SSH calls do not need it: git-shell already
+# rewrites 'git foo' into 'git-foo' before looking the command up.
+
+set -eu
+
+. "$(dirname "$0")/common.sh"
+
+COMMAND_DIR="$(dirname "$0")"
+
+usage() {
+	echo "Run a repository command as 'git SUBCOMMAND'."
+	printf '\n'
+	echo "Usage : git SUBCOMMAND [ARGS...]"
+	printf '\n'
+	echo "Subcommands:"
+
+	for CMD in "${COMMAND_DIR}"/git-*; do
+		[ -f "$CMD" ] && [ -x "$CMD" ] || continue
+
+		CMD_NAME="$(basename "$CMD")"
+		echo "  ${CMD_NAME#git-}"
+	done
+
+	printf '\n'
+	echo "Run 'help git SUBCOMMAND' to see the usage of a subcommand."
+}
+
+if [ $# -eq 0 ]; then
+	usage
+	exit 0
+fi
+
+case "$1" in
+-h | --help)
+	usage
+	exit 0
+	;;
+esac
+
+SUBCOMMAND="$1"
+shift
+
+# Only ever run a sibling 'git-*' script.  Falling back to the real git
+# binary would hand out arbitrary command execution through 'git -c
+# alias.x=!sh x' and defeat the restricted shell.
+case "$SUBCOMMAND" in
+*[!A-Za-z0-9-]*)
+	die "invalid subcommand '${SUBCOMMAND}'."
+	;;
+esac
+
+TARGET="${COMMAND_DIR}/git-${SUBCOMMAND}"
+
+if [ ! -f "$TARGET" ] || [ ! -x "$TARGET" ]; then
+	warn "'${SUBCOMMAND}' is not a git-shell command."
+	echo "Run 'git --help' to see available subcommands." >&2
+	exit 1
+fi
+
+exec "$TARGET" "$@"

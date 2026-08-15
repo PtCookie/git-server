@@ -1,46 +1,64 @@
 #!/bin/sh
+# vim: sw=4:ts=4:et
 
-if [ -z "$1" ]; then
-	echo "No name given."
-	echo "Run 'help git-init' to see usage."
-	exit 1
+set -eu
+
+. "$(dirname "$0")/common.sh"
+
+usage() {
+	echo "Initialize a bare git repository."
+	printf '\n'
+	echo "Usage : git init NAME OWNER [DESC] [SECTION]"
+	echo "        git-init NAME OWNER [DESC] [SECTION]"
+	printf '\n'
+	echo "A trailing '.git' in NAME is ignored."
+	echo "DESC and SECTION are stored as cgit metadata."
+}
+
+case "${1:-}" in
+-h | --help)
+	usage
+	exit 0
+	;;
+esac
+
+if [ $# -lt 1 ]; then
+	die_usage "no name given."
 fi
 
-if [ -z "$2" ]; then
-	echo "No owner given."
-	echo "Run 'help git-init' to see usage."
-	exit 1
+if [ $# -lt 2 ]; then
+	die_usage "no owner given."
 fi
 
-: ${REPOSITORY_DESC:="$3"}
-: ${REPOSITORY_SECTION:="$4"}
+if [ $# -gt 4 ]; then
+	die_usage "too many arguments."
+fi
 
-REPOSITORY_NAME="$1"
+REPOSITORY_NAME="$(repo_name "$1")" || exit 1
 REPOSITORY_OWNER="$2"
+REPOSITORY_DESC="${3:-}"
+REPOSITORY_SECTION="${4:-}"
 
-REPOSITORY_DIR=/srv/git/${REPOSITORY_NAME}.git
+REPOSITORY_DIR="$(repo_dir "${REPOSITORY_NAME}")"
 
-if [ -d "${REPOSITORY_DIR}" ]; then
-	echo "Repository already exists."
-	exit 1
-fi
+require_no_repository "${REPOSITORY_NAME}" || exit 1
 
-git init --bare ${REPOSITORY_DIR}
+# Do not leave a half-created repository behind if any step below fails.
+INCOMPLETE=1
+trap '[ -z "${INCOMPLETE}" ] || rm -rf "${REPOSITORY_DIR}"' EXIT
 
-# Copy hooks
-cp /home/git/hooks/* ${REPOSITORY_DIR}/hooks/
+git init --bare "${REPOSITORY_DIR}"
 
-# Enable post-update hook
-mv ${REPOSITORY_DIR}/hooks/post-update.sample ${REPOSITORY_DIR}/hooks/post-update
+install_hooks "${REPOSITORY_DIR}"
 
-# Cgit config
-cat >>${REPOSITORY_DIR}/config <<EOF
-[cgit]
-	section = ${REPOSITORY_SECTION}
-	name = ${REPOSITORY_NAME}
-	owner = ${REPOSITORY_OWNER}
-	desc = ${REPOSITORY_DESC}
-EOF
+set_metadata "${REPOSITORY_DIR}" \
+	"${REPOSITORY_NAME}" \
+	"${REPOSITORY_OWNER}" \
+	"${REPOSITORY_DESC}" \
+	"${REPOSITORY_SECTION}"
 
-# Make symlink to home directory
-ln -s "${REPOSITORY_DIR}" "${HOME}"
+link_repo "${REPOSITORY_NAME}"
+
+INCOMPLETE=
+
+echo "Initialized repository ${REPOSITORY_NAME}."

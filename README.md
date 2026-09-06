@@ -62,6 +62,28 @@ podman run -d --name git-server \
     git-server:latest
 ```
 
+## Deployment
+
+The image is published to `ghcr.io/ptcookie/git-server` on every `v*` tag, as one
+multi-platform manifest covering `linux/amd64` and `linux/arm64`. Three tags move with
+each release — the full version (`1.2.0`), its major.minor prefix (`1.2`), and `latest`;
+pin a version if a rollback path matters.
+
+```sh
+docker pull ghcr.io/ptcookie/git-server:1.2.0
+```
+
+Run it exactly as in [Run](#run) above, substituting the published image for the locally
+built `git-server:latest`.
+
+The registry's OS/Arch list also shows `unknown/unknown` rows next to the two platforms:
+those are the SLSA provenance attestations buildx attaches by default, not platforms, and
+`docker pull` never resolves them.
+
+In the git-compose stack this replaces the locally built `git-server` service. **Nothing
+pulls or restarts automatically**: rolling out a new image is a manual `docker compose pull`
++ `up --detach` (or the podman equivalent) on the host.
+
 ## Usage
 
 Repositories are managed over SSH. Every repository command can be written either
@@ -71,7 +93,16 @@ an interactive session.
 ```sh
 ssh -p 2222 git@localhost git init my-repo alice "My repository" tools
 ssh -p 2222 git@localhost ls
-git clone ssh://git@localhost:2222/my-repo.git
+git clone git@localhost:my-repo.git
+```
+
+Repository paths are resolved relative to the `git` user's home, where every
+repository is symlinked. On a non-default port, where the `ssh://` form is the
+only one that can carry it, the path has to say so explicitly — a bare
+`ssh://host:port/my-repo.git` is an absolute path and does not resolve:
+
+```sh
+git clone ssh://git@localhost:2222/~/my-repo.git
 ```
 
 An interactive session drops into a restricted shell. Run `help` there, or

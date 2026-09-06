@@ -1,5 +1,13 @@
 FROM docker.io/library/alpine:3.22
 
+# Image metadata. `source` names the origin; the GHCR publish overrides it
+# with the GitHub mirror so that the package links to a browsable repository
+# (see .github/workflows/image.yml).
+LABEL org.opencontainers.image.title="git-server" \
+      org.opencontainers.image.description="SSH-only Git server with a restricted git-shell" \
+      org.opencontainers.image.source="https://git.ptcookie.net/git-server.git" \
+      org.opencontainers.image.licenses="MIT"
+
 # Install packages
 RUN set -ex; \
     apk add --no-cache git openssh curl

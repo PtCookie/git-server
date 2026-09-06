@@ -32,6 +32,8 @@ docker run -d --name git-server \
 
 There is no test suite or linter configured; validate changes by building the image and exercising it via SSH/git-shell (see "Testing changes" below).
 
+CI lives in `.github/workflows/`. `ci.yml` builds the image on `main` and on pull requests — natively on both `linux/amd64` and `linux/arm64` — and runs `scripts/smoke-test.sh` against each. `image.yml` publishes `ghcr.io/ptcookie/git-server` on a `v*` tag as a single multi-platform manifest; deployment stays manual (see README.md#deployment). GitHub is only a mirror of `git.ptcookie.net`, so **no workflow may write to the repository** — a commit a workflow pushes is erased by the next mirror push.
+
 ## Architecture
 
 **Boot sequence** (`entrypoint.sh` → `10-setup.sh` → `sshd -D`):
@@ -86,7 +88,24 @@ Commands:
 
 ## Testing changes
 
-Since there's no automated test suite, verify changes by building the image and driving it end-to-end:
+`scripts/smoke-test.sh` is the automated form of the walkthrough below, and is what CI
+runs. It starts a throwaway container (its own name, port, and volume, all cleaned up on
+exit), provisions it over `SSH_PUBLIC_KEYS_URL` from a key pair it generates, and drives
+every command over SSH:
+
+```sh
+docker build --tag git-server:test --file Containerfile .
+IMAGE=git-server:test ./scripts/smoke-test.sh
+```
+
+It needs `docker` (override with `DOCKER=podman`), `ssh`, `git` and `python3` — the last
+one serves the `authorized_keys` the container fetches. `SSH_PORT` and `KEYS_PORT` move
+the two host ports it binds.
+
+**Adding a command means adding cases to that script**, in the same shape as the existing
+ones: the happy path, and whatever it refuses.
+
+The manual equivalent, for poking at something the script does not cover:
 
 ```sh
 docker build -t git-server:test --file Dockerfile .
@@ -98,7 +117,7 @@ docker run -d --name git-server-test \
 ssh -p 2222 git@localhost git init test-repo someone
 ssh -p 2222 git@localhost ls
 ssh -p 2222 git@localhost git info test-repo
-git clone ssh://git@localhost:2222/test-repo.git
+git clone ssh://git@localhost:2222/~/test-repo.git
 ```
 
 Worth covering when touching the commands: both spellings (`git init` and `git-init`), an

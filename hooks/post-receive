@@ -1,15 +1,9 @@
 #!/bin/sh
-#
-# An example hook to update the "agefile" for CGit's idle time calculation.
-#
+set -u
+
 # This hook assumes that you are using the default agefile location of
 # "info/web/last-modified".  If you change the value in your cgitrc then you
 # must also change it here.
-#
-# To install the hook, copy (or link) it to the file "hooks/post-receive" in
-# each of your repositories.
-#
-
 agefile="$(git rev-parse --git-dir)"/info/web/last-modified
 
 mkdir -p "$(dirname "$agefile")" &&
@@ -17,3 +11,32 @@ mkdir -p "$(dirname "$agefile")" &&
 		--sort=-authordate --count=1 \
 		--format='%(authordate:iso8601)' \
 		>"$agefile"
+
+# Push to mirror repositories
+mirrors=$(git config --get-all mirror.remote)
+[ -z "$mirrors" ] && exit 0
+
+refspecs=""
+while read -r oldrev newrev refname; do
+	case "$refname" in
+	refs/heads/* | refs/tags/*) ;;
+	*) continue ;;
+	esac
+
+	case "$newrev" in
+	# Force: origin is the source of truth (rebase/amend must propagate)
+	*[!0]*) refspecs="$refspecs +${newrev}:${refname}" ;;
+	# Deleted on origin -> delete on the mirror as well
+	*) refspecs="$refspecs :${refname}" ;;
+	esac
+done
+
+refspecs="${refspecs# }"
+[ -z "$refspecs" ] && exit 0
+
+echo "$mirrors" | while read -r remote; do
+	[ -z "$remote" ] && continue
+	if ! git push "$remote" $refspecs 2>&1; then
+		echo "warning: mirror push to $remote failed" >&2
+	fi
+done

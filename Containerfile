@@ -1,4 +1,4 @@
-FROM docker.io/library/alpine:3.22
+FROM docker.io/library/alpine:3.24
 
 # Image metadata. `source` names the origin; the GHCR publish overrides it
 # with the GitHub mirror so that the package links to a browsable repository

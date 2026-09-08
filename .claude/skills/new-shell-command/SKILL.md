@@ -257,17 +257,53 @@ adding new ones, and put your block near the related cases, not at the end.
 
 ## 5. Verify
 
+`lefthook` runs `shellcheck` on commit, but run it directly while iterating:
+
 ```sh
-shellcheck git-shell-commands/<name>          # POSIX: no bashisms, quoting
+shellcheck --shell=sh --external-sources --source-path=SCRIPTDIR \
+	git-shell-commands/<name>
+```
+
+Then build and drive the real thing:
+
+```sh
 docker build --tag git-server:test --file Containerfile .
 IMAGE=git-server:test ./scripts/smoke-test.sh
 ```
 
-Then, if the command prompts or you want to poke at the interactive path:
+`smoke-test.sh` starts a throwaway container — its own name, port and volume,
+all cleaned up on exit — provisions it over `SSH_PUBLIC_KEYS_URL` from a key pair it
+generates, and drives every command over SSH. It needs `docker` (override with
+`DOCKER=podman`), `ssh`, `git` and `python3`; the last one serves the `authorized_keys`
+the container fetches. `SSH_PORT` and `KEYS_PORT` move the two host ports it binds.
+
+### Poking at something the script does not cover
 
 ```sh
-ssh -p 2222 -t git@localhost                  # 'git verb' via the dispatcher
-ssh -p 2222 git@localhost help git verb       # the usage() output
+docker build -t git-server:test --file Dockerfile .
+docker run -d --name git-server-test \
+	--env SSH_PUBLIC_KEYS_URL=<url-to-a-test-authorized_keys> \
+	--publish 2222:22 \
+	--volume git-repository-test:/srv/git \
+	git-server:test
+
+ssh -p 2222 git@localhost git init test-repo someone   # rewritten spelling
+ssh -p 2222 git@localhost git-init test-repo someone   # direct spelling
+ssh -p 2222 git@localhost ls
+ssh -p 2222 git@localhost help git verb                # the usage() output
+ssh -p 2222 -t git@localhost                           # interactive: dispatcher
+                                                       # and confirm prompts
+git clone ssh://git@localhost:2222/~/test-repo.git
+```
+
+Always exercise the refusals by hand too, not just the happy path:
+
+```sh
+ssh -p 2222 git@localhost git init ../../tmp/evil someone
+ssh -p 2222 git@localhost rm ../../srv
+ssh -p 2222 git@localhost "git init x someone '\$(touch /tmp/pwned)'"
+ssh -p 2222 git@localhost "git -c alias.x=!sh x"
+docker exec git-server-test ls /tmp                    # nothing should be there
 ```
 
 ## 6. Update the docs

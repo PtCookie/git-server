@@ -1,0 +1,67 @@
+# Local git hooks, run through lefthook (https://lefthook.dev).
+#
+#     lefthook install     # once per clone, writes .git/hooks/pre-commit
+#     lefthook run pre-commit --all-files
+#
+# This repository has no test suite and no build: the image *is* the artifact,
+# and every script in it is POSIX sh that runs as the `git` user behind a
+# restricted shell.  shellcheck is therefore the only static check worth
+# having, and it is cheap enough (<1s over every script here) to run on every
+# commit.  The end-to-end check stays in `scripts/smoke-test.sh`, which needs a
+# container and belongs in CI, not in a pre-commit hook.
+#
+# Set LEFTHOOK=0 to skip, or `git commit --no-verify`.
+
+min_version: 1.10.0
+
+pre-commit:
+  parallel: true
+  jobs:
+    # Only 3 of the ~17 shell scripts here end in `.sh`: a git-shell command is
+    # named after the verb it implements (`git-init`, `ls`, `mv`), and the hook
+    # template is `hooks/post-receive`.  So the glob has to be path-shaped
+    # rather than extension-shaped, and any new directory holding scripts needs
+    # an entry here.
+    - name: shellcheck
+      glob:
+        - "*.sh"
+        - "git-shell-commands/*"
+        - "hooks/*"
+      exclude:
+        - "**/.claude/**"
+      # --shell=sh because the shebangs are `#!/bin/sh` and bashisms are a
+      #   portability bug in an Alpine image, not a style preference.
+      # --source-path=SCRIPTDIR so that `. "$(dirname "$0")/common.sh"`
+      #   resolves; without it every command reports SC1091.
+      # --severity=style to fail on everything, since the tree is clean at
+      #   this level today.  Suppress a deliberate exception at its call site
+      #   with `# shellcheck disable=SCxxxx` and a comment saying why, the way
+      #   `hooks/post-receive` and `scripts/smoke-test.sh` already do.
+      run: shellcheck --shell=sh --external-sources --source-path=SCRIPTDIR --severity=style {staged_files}
+      fail_text: |
+        shellcheck failed. Fix the finding, or suppress it at the call site
+        with a `# shellcheck disable=SCxxxx` comment explaining why.
+
+    # A command that is not executable is invisible: `help` lists only
+    # executable files and the `git` dispatcher tests `[ -x ]` before exec.
+    # Catching a missing mode bit here beats discovering it over SSH.
+    # `common.sh` is intentionally excluded -- it must stay non-executable so
+    # that it never shows up as a command.
+    - name: commands-executable
+      glob:
+        - "git-shell-commands/*"
+      exclude:
+        - "git-shell-commands/common.sh"
+        - "**/.claude/**"
+      run: |
+        status=0
+        for file in {staged_files}; do
+          if [ ! -x "$file" ]; then
+            echo "not executable: $file" >&2
+            status=1
+          fi
+        done
+        exit "$status"
+      fail_text: |
+        A git-shell command must be executable to be reachable.
+        Run: chmod +x <file> && git add <file>

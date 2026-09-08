@@ -4,15 +4,15 @@
 set -eu
 
 info() {
-	echo "$0: $@"
+	echo "$0: $*"
 }
 
 warn() {
-	echo "$0: WARN: $@"
+	echo "$0: WARN: $*"
 }
 
 error() {
-	echo "$0: ERR: $@" 1>&2
+	echo "$0: ERR: $*" 1>&2
 }
 
 ENTRYPOINT_DIR="/entrypoint.d/"

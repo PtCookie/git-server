@@ -30,7 +30,9 @@ docker run -d --name git-server \
     git-server:latest
 ```
 
-There is no test suite or linter configured; validate changes by building the image and exercising it via SSH/git-shell (see "Testing changes" below).
+There is no test suite: validate changes by building the image and exercising it via SSH/git-shell (see "Testing changes" below).
+
+The one static check is `shellcheck`, wired to a pre-commit hook through `lefthook.yml`. Run `lefthook install` once per clone to activate it (`lefthook run pre-commit --all-files` to check everything by hand). Because most scripts here are named after the verb they implement rather than ending in `.sh`, the hook's `glob` is path-shaped — a new directory holding scripts needs an entry in `lefthook.yml`. The tree is clean at `--severity=style`; suppress a deliberate exception at its call site with `# shellcheck disable=SCxxxx` and a comment saying why, as `hooks/post-receive` and `scripts/smoke-test.sh` do.
 
 CI lives in `.github/workflows/`. `ci.yml` builds the image on `main` and on pull requests — natively on both `linux/amd64` and `linux/arm64` — and runs `scripts/smoke-test.sh` against each. `image.yml` publishes `ghcr.io/ptcookie/git-server` on a `v*` tag as a single multi-platform manifest; deployment stays manual (see README.md#deployment). GitHub is only a mirror of `git.ptcookie.net`, so **no workflow may write to the repository** — a commit a workflow pushes is erased by the next mirror push.
 
@@ -76,7 +78,7 @@ Commands:
 
 ## Conventions to follow when editing shell scripts
 
-- POSIX `sh`, not bash (`#!/bin/sh`, no bashisms).
+- POSIX `sh`, not bash (`#!/bin/sh`, no bashisms). `shellcheck --shell=sh` enforces this on commit; a bashism in an Alpine image is a portability bug, not a style preference.
 - `set -eu` (or `set -ex`/`set -eux` for verbose build-time steps) at the top of scripts.
 - Tab indentation, matching the existing `# vim: sw=4:ts=4:et` modeline where present.
 - Never build a path out of a user-supplied name by hand. Source `common.sh` and go through `repo_name` / `repo_dir`, which is what keeps `../..` out of `/srv/git`.

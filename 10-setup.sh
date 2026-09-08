@@ -4,7 +4,7 @@
 set -eu
 
 warn() {
-	echo "$0: WARN: $@"
+	echo "$0: WARN: $*"
 }
 
 # Set specific UID and GID for the git user

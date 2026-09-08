@@ -17,6 +17,8 @@ mirrors=$(git config --get-all mirror.remote)
 [ -z "$mirrors" ] && exit 0
 
 refspecs=""
+# oldrev is only here to consume the first field of the post-receive line.
+# shellcheck disable=SC2034
 while read -r oldrev newrev refname; do
 	case "$refname" in
 	refs/heads/* | refs/tags/*) ;;
@@ -36,6 +38,10 @@ refspecs="${refspecs# }"
 
 echo "$mirrors" | while read -r remote; do
 	[ -z "$remote" ] && continue
+	# refspecs is a space-separated list that has to split into one argument
+	# per refspec, so it is deliberately unquoted.  The values are object
+	# ids and ref names built above, never user-supplied text.
+	# shellcheck disable=SC2086
 	if ! git push "$remote" $refspecs 2>&1; then
 		echo "warning: mirror push to $remote failed" >&2
 	fi

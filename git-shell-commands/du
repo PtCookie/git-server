@@ -1,0 +1,65 @@
+#!/bin/sh
+# vim: sw=4:ts=4:et
+
+set -eu
+
+. "$(dirname "$0")/common.sh"
+
+usage() {
+	echo "Show the disk usage of repositories."
+	printf '\n'
+	echo "Usage : du [NAME]"
+	printf '\n'
+	echo "Without NAME every repository is measured, followed by a total."
+}
+
+case "${1:-}" in
+-h | --help)
+	usage
+	exit 0
+	;;
+-?*)
+	die_usage "unknown option '$1'."
+	;;
+esac
+
+if [ $# -gt 1 ]; then
+	die_usage "too many arguments."
+fi
+
+if [ $# -eq 1 ]; then
+	REPOSITORY_NAME="$(repo_name "$1")" || exit 1
+	require_repository "${REPOSITORY_NAME}" || exit 1
+
+	REPOSITORIES="${REPOSITORY_NAME}"
+else
+	REPOSITORIES="$(list_repositories)"
+fi
+
+if [ -z "${REPOSITORIES}" ]; then
+	echo "No repositories."
+	exit 0
+fi
+
+# Collect the paths as positional parameters so that du runs once.  They all
+# come out of repo_dir, so they are absolute and can never be read as an
+# option.
+set --
+
+for REPOSITORY in ${REPOSITORIES}; do
+	set -- "$@" "$(repo_dir "${REPOSITORY}")"
+done
+
+# '-c' adds the total, which only says something when there is more than one
+# repository to add up.  awk turns the path back into the bare name; the
+# total line carries no slash, so it passes through untouched.
+if [ $# -gt 1 ]; then
+	du -sh -c "$@"
+else
+	du -sh "$@"
+fi | awk -F'\t' '{
+	name = $2
+	sub(/^.*\//, "", name)
+	sub(/\.git$/, "", name)
+	printf "%-8s %s\n", $1, name
+}'

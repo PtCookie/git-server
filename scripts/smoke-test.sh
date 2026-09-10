@@ -266,6 +266,35 @@ fi
 check_fails "git head refuses a branch that does not exist" \
 	ssh_git "git head smoke-a nonexistent" || true
 
+# smoke-a has been pushed to by now, so it holds real objects to measure.
+if check "du measures every repository" ssh_git du; then
+	if grep -qE '^[0-9.]+[KMGT]?[[:space:]]+smoke-a$' "${LOG}" &&
+		grep -qE '[[:space:]]smoke-b$' "${LOG}" &&
+		grep -qE '[[:space:]]total$' "${LOG}"; then
+		ok "du prints a size per repository and a total"
+	else
+		not_ok "du prints a size per repository and a total"
+	fi
+fi
+
+if check "du measures a single repository" ssh_git "du smoke-a"; then
+	if grep -qE '^[0-9.]+[KMGT]?[[:space:]]+smoke-a$' "${LOG}" &&
+		! grep -q 'smoke-b' "${LOG}" && ! grep -q 'total' "${LOG}"; then
+		ok "du of one repository omits the others and the total"
+	else
+		not_ok "du of one repository omits the others and the total"
+	fi
+fi
+
+# help only finds it if it landed in the image with the execute bit set.
+if check "help du prints the usage" ssh_git "help du"; then
+	if grep -q 'Usage : du' "${LOG}"; then
+		ok "du is executable inside the image"
+	else
+		not_ok "du is executable inside the image"
+	fi
+fi
+
 # common.sh is not executable precisely so that it never shows up here.
 if check "help lists the commands" ssh_git "help"; then
 	if grep -q '^git init$' "${LOG}" && grep -qx 'ls' "${LOG}" && ! grep -q 'common\.sh' "${LOG}"; then
@@ -299,6 +328,18 @@ check_fails "rm rejects a name that escapes /srv/git" \
 
 check "the repositories directory survived" \
 	in_container test -d /srv/git/smoke-a.git || true
+
+check_fails "du rejects a name that escapes /srv/git" \
+	ssh_git "du ../../srv" || true
+
+check_fails "du refuses a repository that does not exist" \
+	ssh_git "du nonexistent" || true
+
+check_fails "du rejects an unknown option" \
+	ssh_git "du --bogus" || true
+
+check_fails "du rejects too many arguments" \
+	ssh_git "du smoke-a smoke-b" || true
 
 # The dispatcher must never reach the real git binary: an alias is a shell
 # escape out of the restricted shell.

@@ -61,7 +61,7 @@ CI lives in `.github/workflows/`. `ci.yml` builds the image on `main` and on pul
 
 **`git-shell-commands/` — the entire admin surface for repo management**, invoked as `ssh git@host <command> [args]` or interactively inside `git-shell`.
 
-Every repo command is a file named `git-<verb>`, reachable both ways: git-shell rewrites `git foo` into the `git-foo` **filename** for `ssh git@host git foo`, and the `git` dispatcher script resolves `git <verb>` to the sibling file when typed at the interactive `git>` prompt. `ls`, `mv` and `rm` are deliberately *not* `git-*` — they are filesystem-shaped verbs, and `git mv`/`git rm` already mean something else in git.
+Every repo command is a file named `git-<verb>`, reachable both ways: git-shell rewrites `git foo` into the `git-foo` **filename** for `ssh git@host git foo`, and the `git` dispatcher script resolves `git <verb>` to the sibling file when typed at the interactive `git>` prompt. `ls`, `du`, `mv` and `rm` are deliberately *not* `git-*` — they are filesystem-shaped verbs, and `git mv`/`git rm` already mean something else in git.
 
 The dispatcher **must never fall back to the real `git` binary** — `git -c alias.x='!sh' x` would hand out arbitrary command execution and defeat the restricted shell.
 
@@ -75,6 +75,7 @@ Each command documents itself via `--help`; run `help NAME` rather than re-readi
 | `git-info NAME`, `git-head NAME [BRANCH]` | Metadata/HEAD; show or set the default branch | `git-head` refuses a branch that does not exist |
 | `git-gc [--aggressive] [NAME]`, `git-fsck [NAME]` | Maintenance over one repo or all of them | — |
 | `ls` | Valid bare repos, without the `.git` suffix | Output feeds straight back into the other commands |
+| `du [NAME]` | Disk usage of one repo or all of them, plus a total | Paths always come out of `repo_dir`, so `du` never sees a user-supplied string |
 | `mv CURRENT NEW`, `rm NAME` | Rename/delete, re-syncing the `~` symlink | `mv` asks yes/no, `rm` makes you type the name back; both take `--yes` |
 | `help [command]` | Lists executable files, delegates to `NAME --help` | **New commands are picked up automatically** if executable and implementing `--help` |
 

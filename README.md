@@ -18,7 +18,7 @@ at the same volume, but nothing here depends on one.
   the `git` account's login shell is `git-shell`, so a client can only run
   `git-upload-pack`/`git-receive-pack` or one of the commands below.
 - **Repository management over SSH** — `git init`, `git import`, `git info`, `git head`,
-  `git config`, `git gc` and `git fsck`, plus `ls`, `mv`, `rm` and `help`. Every repository
+  `git config`, `git gc` and `git fsck`, plus `ls`, `du`, `mv`, `rm` and `help`. Every repository
   command is spelled both ways — `git <verb>` and `git-<verb>` — in a one-shot SSH call and in an
   interactive session alike.
 - **Safe by construction** — Repository names are validated before they ever become a path, so
@@ -175,6 +175,7 @@ ssh -p 2222 -t git@localhost
 | `git gc [--aggressive] [NAME]` | Compact one or every repository |
 | `git fsck [NAME]` | Check the integrity of one or every repository |
 | `ls` | List repositories |
+| `du [NAME]` | Show the disk usage of one or every repository |
 | `mv [--yes] CURRENT NEW` | Rename a repository |
 | `rm [--yes] NAME` | Remove a repository |
 | `help [COMMAND]` | Show available commands, or the usage of one |
